@@ -1,0 +1,25 @@
+video-management/
+├── src/
+│   ├── api/
+│   │   ├── video.js
+│   │   ├── vehicle.js
+│   │   ├── access.js
+│   │   └── alarm.js
+│   ├── components/
+│   │   ├── VideoPlayer.vue
+│   │   ├── AlarmNotification.vue
+│   │   └── VideoControl.vue
+│   ├── views/
+│   │   ├── VideoMonitor.vue
+│   │   ├── VehicleManagement.vue
+│   │   ├── AccessControl.vue
+│   │   └── AlarmManagement.vue
+│   ├── mock/
+│   │   └── index.js
+│   ├── router/
+│   │   └── index.js
+│   ├── store/
+│   │   └── index.js
+│   ├── App.vue
+│   └── main.js
+└── package.json 

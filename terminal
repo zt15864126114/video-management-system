@@ -1,0 +1,13 @@
+# 创建Vue项目
+npm create vite@latest video-management -- --template vue
+
+# 安装依赖
+cd video-management
+npm install
+npm install element-plus
+npm install axios
+npm install mockjs
+npm install vue-router
+npm install pinia
+npm install @element-plus/icons-vue
+npm install echarts@latest 
