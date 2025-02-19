@@ -1,0 +1,1 @@
+import{_ as o,c as t,b as s,d as c,e as a}from"./index-DE67zCuG.js";const r={},n={class:"system-layout"};function _(d,m){const e=a("router-view");return s(),t("div",n,[c(e)])}const i=o(r,[["render",_],["__scopeId","data-v-f2eea5b7"]]);export{i as default};
