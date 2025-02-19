@@ -51,6 +51,28 @@
           <el-icon><AlarmClock /></el-icon>
           <template #title>报警管理</template>
         </el-menu-item>
+        <el-sub-menu index="/system">
+          <template #title>
+            <el-icon><Setting /></el-icon>
+            <span>系统管理</span>
+          </template>
+          <el-menu-item index="/system/settings">
+            <el-icon><Tools /></el-icon>
+            <template #title>系统设置</template>
+          </el-menu-item>
+          <el-menu-item index="/system/users">
+            <el-icon><User /></el-icon>
+            <template #title>用户管理</template>
+          </el-menu-item>
+          <el-menu-item index="/system/roles">
+            <el-icon><UserFilled /></el-icon>
+            <template #title>角色权限</template>
+          </el-menu-item>
+          <el-menu-item index="/system/logs">
+            <el-icon><List /></el-icon>
+            <template #title>系统日志</template>
+          </el-menu-item>
+        </el-sub-menu>
       </el-menu>
     </el-aside>
     
@@ -109,7 +131,7 @@
 import { ref } from 'vue'
 import { 
   VideoCamera, Van, Lock, AlarmClock, Bell, 
-  Expand, Fold, CaretBottom, User, Edit, SwitchButton, Setting, Monitor, Document 
+  Expand, Fold, CaretBottom, User, Edit, SwitchButton, Setting, Monitor, Document, Tools, UserFilled, List 
 } from '@element-plus/icons-vue'
 import Breadcrumb from './components/Breadcrumb.vue'
 

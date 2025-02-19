@@ -3,7 +3,13 @@ import { createRouter, createWebHistory } from 'vue-router'
 const routes = [
   {
     path: '/',
-    redirect: '/video-monitor'
+    redirect: '/welcome'
+  },
+  {
+    path: '/welcome',
+    name: 'Welcome',
+    component: () => import('../views/Welcome.vue'),
+    meta: { title: '欢迎' }
   },
   {
     path: '/video-monitor',
@@ -58,6 +64,39 @@ const routes = [
     name: 'AlarmManagement',
     component: () => import('../views/AlarmManagement.vue'),
     meta: { title: '报警管理' }
+  },
+  {
+    path: '/system',
+    name: 'SystemManagement',
+    component: () => import('../views/system/SystemLayout.vue'),
+    meta: { title: '系统管理' },
+    redirect: '/system/settings',
+    children: [
+      {
+        path: 'settings',
+        name: 'SystemSettings',
+        component: () => import('../views/system/SystemSettings.vue'),
+        meta: { title: '系统设置' }
+      },
+      {
+        path: 'users',
+        name: 'SystemUsers',
+        component: () => import('../views/system/SystemUsers.vue'),
+        meta: { title: '用户管理' }
+      },
+      {
+        path: 'roles',
+        name: 'SystemRoles',
+        component: () => import('../views/system/SystemRoles.vue'),
+        meta: { title: '角色权限' }
+      },
+      {
+        path: 'logs',
+        name: 'SystemLogs',
+        component: () => import('../views/system/SystemLogs.vue'),
+        meta: { title: '系统日志' }
+      }
+    ]
   }
 ]
 
