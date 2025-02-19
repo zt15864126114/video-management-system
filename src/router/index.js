@@ -19,9 +19,24 @@ const routes = [
   },
   {
     path: '/access-control',
-    name: 'AccessControl',
-    component: () => import('../views/AccessControl.vue'),
-    meta: { title: '门禁管理' }
+    name: 'AccessManagement',
+    component: () => import('../views/access/AccessLayout.vue'),
+    meta: { title: '门禁管理' },
+    redirect: '/access-control/monitor',
+    children: [
+      {
+        path: 'monitor',
+        name: 'AccessMonitor',
+        component: () => import('../views/access/AccessMonitor.vue'),
+        meta: { title: '门禁监控' }
+      },
+      {
+        path: 'control',
+        name: 'AccessControlSettings',
+        component: () => import('../views/access/AccessControl.vue'),
+        meta: { title: '门禁控制' }
+      }
+    ]
   },
   {
     path: '/alarm-management',

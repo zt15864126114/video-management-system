@@ -23,10 +23,20 @@
           <el-icon><Van /></el-icon>
           <template #title>车辆管理</template>
         </el-menu-item>
-        <el-menu-item index="/access-control">
-          <el-icon><Lock /></el-icon>
-          <template #title>门禁管理</template>
-        </el-menu-item>
+        <el-sub-menu index="/access-control">
+          <template #title>
+            <el-icon><Lock /></el-icon>
+            <span>门禁管理</span>
+          </template>
+          <el-menu-item index="/access-control/monitor">
+            <el-icon><VideoCamera /></el-icon>
+            <template #title>门禁监控</template>
+          </el-menu-item>
+          <el-menu-item index="/access-control/control">
+            <el-icon><Setting /></el-icon>
+            <template #title>门禁控制</template>
+          </el-menu-item>
+        </el-sub-menu>
         <el-menu-item index="/alarm-management">
           <el-icon><AlarmClock /></el-icon>
           <template #title>报警管理</template>
@@ -89,7 +99,7 @@
 import { ref } from 'vue'
 import { 
   VideoCamera, Van, Lock, AlarmClock, Bell, 
-  Expand, Fold, CaretBottom, User, Edit, SwitchButton 
+  Expand, Fold, CaretBottom, User, Edit, SwitchButton, Setting 
 } from '@element-plus/icons-vue'
 import Breadcrumb from './components/Breadcrumb.vue'
 
@@ -478,5 +488,33 @@ html, body {
   height: 40px;
   line-height: 40px;
   border-radius: 4px;
+}
+
+/* 子菜单样式 */
+.el-menu-vertical :deep(.el-sub-menu) {
+  margin: 8px 0;
+}
+
+.el-menu-vertical :deep(.el-sub-menu__title) {
+  height: 44px;
+  line-height: 44px;
+  border-radius: 8px;
+  color: rgba(255, 255, 255, 0.65);
+}
+
+.el-menu-vertical :deep(.el-sub-menu__title:hover) {
+  background: rgba(255, 255, 255, 0.1) !important;
+  color: #fff;
+}
+
+.el-menu-vertical :deep(.el-menu--inline) {
+  background: transparent;
+  padding: 4px 0 4px 16px;
+}
+
+.el-menu-vertical :deep(.el-menu--inline .el-menu-item) {
+  height: 40px;
+  line-height: 40px;
+  padding-left: 48px !important;
 }
 </style>
