@@ -14,8 +14,23 @@ const routes = [
   {
     path: '/vehicle-management',
     name: 'VehicleManagement',
-    component: () => import('../views/VehicleManagement.vue'),
-    meta: { title: '车辆管理' }
+    component: () => import('../views/vehicle/VehicleLayout.vue'),
+    meta: { title: '车辆管理' },
+    redirect: '/vehicle-management/monitor',
+    children: [
+      {
+        path: 'monitor',
+        name: 'VehicleMonitor',
+        component: () => import('../views/vehicle/VehicleMonitor.vue'),
+        meta: { title: '车辆监控' }
+      },
+      {
+        path: 'register',
+        name: 'VehicleRegister',
+        component: () => import('../views/vehicle/VehicleRegister.vue'),
+        meta: { title: '车辆登记' }
+      }
+    ]
   },
   {
     path: '/access-control',

@@ -19,10 +19,20 @@
           <el-icon><VideoCamera /></el-icon>
           <template #title>视频监控</template>
         </el-menu-item>
-        <el-menu-item index="/vehicle-management">
-          <el-icon><Van /></el-icon>
-          <template #title>车辆管理</template>
-        </el-menu-item>
+        <el-sub-menu index="/vehicle-management">
+          <template #title>
+            <el-icon><Van /></el-icon>
+            <span>车辆管理</span>
+          </template>
+          <el-menu-item index="/vehicle-management/monitor">
+            <el-icon><Monitor /></el-icon>
+            <template #title>车辆监控</template>
+          </el-menu-item>
+          <el-menu-item index="/vehicle-management/register">
+            <el-icon><Document /></el-icon>
+            <template #title>车辆登记</template>
+          </el-menu-item>
+        </el-sub-menu>
         <el-sub-menu index="/access-control">
           <template #title>
             <el-icon><Lock /></el-icon>
@@ -99,7 +109,7 @@
 import { ref } from 'vue'
 import { 
   VideoCamera, Van, Lock, AlarmClock, Bell, 
-  Expand, Fold, CaretBottom, User, Edit, SwitchButton, Setting 
+  Expand, Fold, CaretBottom, User, Edit, SwitchButton, Setting, Monitor, Document 
 } from '@element-plus/icons-vue'
 import Breadcrumb from './components/Breadcrumb.vue'
 
