@@ -8,6 +8,7 @@ export default defineConfig({
     port: 3000,
     open: true
   },
+  base: '/video-management-system/',
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src')
