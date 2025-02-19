@@ -8,7 +8,10 @@ on:
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
-
+    
+    permissions:
+      contents: write # 添加写入权限
+    
     steps:
       - name: Checkout
         uses: actions/checkout@v3
@@ -19,6 +22,11 @@ jobs:
           node-version: '16'
           cache: 'npm'
 
+      - name: Setup Environment
+        run: |
+          export NODE_OPTIONS=--openssl-legacy-provider
+          echo "NODE_OPTIONS=--openssl-legacy-provider" >> $GITHUB_ENV
+
       - name: Install Dependencies
         run: npm install
 
@@ -26,10 +34,12 @@ jobs:
         run: npm run build
         env:
           NODE_ENV: production
+          NODE_OPTIONS: --openssl-legacy-provider
 
       - name: Deploy
         uses: JamesIves/github-pages-deploy-action@v4
         with:
           folder: dist # 构建输出目录
           branch: gh-pages # 部署分支
-          clean: true # 清理旧文件 
+          clean: true # 清理旧文件
+          token: ${{ secrets.GITHUB_TOKEN }} 
