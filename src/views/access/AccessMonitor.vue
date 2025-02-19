@@ -61,7 +61,7 @@
                 <div class="door-info">
                   <p>位置：{{ door.location }}</p>
                   <p>最近操作：{{ door.lastOperation }}</p>
-                  <p>操作时间：{{ door.lastOperationTime }}</p>
+                  <p>操作时间：{{ formatTimeAgo(door.lastOperationTime) }}</p>
                   <p>今日通行：{{ door.todayPassCount }} 人次</p>
                   <p>状态：<el-tag size="small" :type="door.deviceStatus === 'online' ? 'success' : 'danger'">
                     {{ door.deviceStatus === 'online' ? '在线' : '离线' }}
@@ -181,7 +181,7 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { Lock, CircleClose, Refresh, Filter, Search } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
 
@@ -275,8 +275,59 @@ const generateRandomRecord = () => {
   }
 }
 
-// 更新初始通行记录
+// 初始化记录
 accessRecords.value = Array.from({ length: 20 }, () => generateRandomRecord())
+
+// 自动添加新记录
+const autoAddRecord = () => {
+  // 生成新记录
+  const newRecord = generateRandomRecord()
+  
+  // 添加到列表开头
+  accessRecords.value.unshift(newRecord)
+  
+  // 保持最多50条记录
+  if (accessRecords.value.length > 50) {
+    accessRecords.value.pop()
+  }
+  
+  // 更新相关门禁的通行次数
+  const relatedDoor = doors.value.find(door => door.name === newRecord.doorName)
+  if (relatedDoor) {
+    relatedDoor.todayPassCount++
+    if (newRecord.status === '异常') {
+      statsData.value[2].value = parseInt(statsData.value[2].value) + 1
+    }
+  }
+}
+
+// 设置定时器，随机间隔（2-5秒）添加新记录
+let autoUpdateTimer = null
+
+const startAutoUpdate = () => {
+  const randomInterval = () => Math.floor(Math.random() * (5000 - 2000 + 1) + 2000)
+  
+  const scheduleNext = () => {
+    autoUpdateTimer = setTimeout(() => {
+      autoAddRecord()
+      scheduleNext()
+    }, randomInterval())
+  }
+  
+  scheduleNext()
+}
+
+// 组件挂载时启动自动更新
+onMounted(() => {
+  startAutoUpdate()
+})
+
+// 组件卸载时清除定时器
+onUnmounted(() => {
+  if (autoUpdateTimer) {
+    clearTimeout(autoUpdateTimer)
+  }
+})
 
 // 统计数据
 const statsData = ref([
@@ -310,8 +361,8 @@ const doors = ref([
     name: '教学楼正门',
     location: '教学区',
     status: 'open',
-    lastOperation: '正常开启',
-    lastOperationTime: '2024-03-20 10:30:45',
+    lastOperation: '刷卡开启',
+    lastOperationTime: new Date(Date.now() - 15 * 60000).toLocaleString(), // 15分钟前
     deviceStatus: 'online',
     todayPassCount: 1256
   },
@@ -321,7 +372,7 @@ const doors = ref([
     location: '教学区',
     status: 'closed',
     lastOperation: '定时关闭',
-    lastOperationTime: '2024-03-20 22:00:00',
+    lastOperationTime: new Date(Date.now() - 2 * 60 * 60000).toLocaleString(), // 2小时前
     deviceStatus: 'online',
     todayPassCount: 2145
   },
@@ -330,8 +381,8 @@ const doors = ref([
     name: '实验楼大门',
     location: '实验区',
     status: 'open',
-    lastOperation: '正常开启',
-    lastOperationTime: '2024-03-20 08:00:00',
+    lastOperation: '人脸识别',
+    lastOperationTime: new Date(Date.now() - 5 * 60000).toLocaleString(), // 5分钟前
     deviceStatus: 'online',
     todayPassCount: 986
   },
@@ -341,7 +392,7 @@ const doors = ref([
     location: '生活区',
     status: 'open',
     lastOperation: '刷卡开启',
-    lastOperationTime: '2024-03-20 10:15:22',
+    lastOperationTime: new Date(Date.now() - 8 * 60000).toLocaleString(), // 8分钟前
     deviceStatus: 'online',
     todayPassCount: 1678
   },
@@ -351,7 +402,7 @@ const doors = ref([
     location: '生活区',
     status: 'open',
     lastOperation: '人脸识别',
-    lastOperationTime: '2024-03-20 10:28:15',
+    lastOperationTime: new Date(Date.now() - 3 * 60000).toLocaleString(), // 3分钟前
     deviceStatus: 'online',
     todayPassCount: 1523
   },
@@ -361,7 +412,7 @@ const doors = ref([
     location: '生活区',
     status: 'open',
     lastOperation: '正常开启',
-    lastOperationTime: '2024-03-20 06:30:00',
+    lastOperationTime: new Date(Date.now() - 30 * 60000).toLocaleString(), // 30分钟前
     deviceStatus: 'online',
     todayPassCount: 3245
   },
@@ -371,7 +422,7 @@ const doors = ref([
     location: '运动区',
     status: 'closed',
     lastOperation: '定时关闭',
-    lastOperationTime: '2024-03-20 22:00:00',
+    lastOperationTime: new Date(Date.now() - 12 * 60 * 60000).toLocaleString(), // 12小时前
     deviceStatus: 'offline',
     todayPassCount: 456
   },
@@ -381,7 +432,7 @@ const doors = ref([
     location: '运动区',
     status: 'closed',
     lastOperation: '定时关闭',
-    lastOperationTime: '2024-03-20 21:30:00',
+    lastOperationTime: new Date(Date.now() - 10 * 60 * 60000).toLocaleString(), // 10小时前
     deviceStatus: 'online',
     todayPassCount: 234
   },
@@ -390,8 +441,8 @@ const doors = ref([
     name: '行政楼入口',
     location: '办公区',
     status: 'open',
-    lastOperation: '正常开启',
-    lastOperationTime: '2024-03-20 08:30:00',
+    lastOperation: '人脸识别',
+    lastOperationTime: new Date(Date.now() - 20 * 60000).toLocaleString(), // 20分钟前
     deviceStatus: 'online',
     todayPassCount: 567
   },
@@ -401,7 +452,7 @@ const doors = ref([
     location: '教学区',
     status: 'open',
     lastOperation: '刷卡开启',
-    lastOperationTime: '2024-03-20 09:15:00',
+    lastOperationTime: new Date(Date.now() - 45 * 60000).toLocaleString(), // 45分钟前
     deviceStatus: 'online',
     todayPassCount: 789
   }
@@ -432,8 +483,16 @@ const doorActivities = ref([
 // 方法
 const handleDoorControl = (door, action) => {
   door.status = action === 'open' ? 'open' : 'closed'
-  door.lastOperation = `${action === 'open' ? '开启' : '关闭'}`
-  door.lastOperationTime = new Date().toLocaleString()
+  door.lastOperation = `${action === 'open' ? '手动开启' : '手动关闭'}`
+  door.lastOperationTime = new Date().toLocaleString('zh-CN', {
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    hour12: false
+  })
   ElMessage.success(`${door.name}已${action === 'open' ? '开启' : '关闭'}`)
 }
 
@@ -441,7 +500,15 @@ const handleEmergencyUnlock = () => {
   doors.value.forEach(door => {
     door.status = 'open'
     door.lastOperation = '紧急开启'
-    door.lastOperationTime = new Date().toLocaleString()
+    door.lastOperationTime = new Date().toLocaleString('zh-CN', {
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+      hour12: false
+    })
   })
   ElMessage.success('已紧急开启所有门禁')
 }
@@ -450,7 +517,15 @@ const handleEmergencyLock = () => {
   doors.value.forEach(door => {
     door.status = 'closed'
     door.lastOperation = '紧急关闭'
-    door.lastOperationTime = new Date().toLocaleString()
+    door.lastOperationTime = new Date().toLocaleString('zh-CN', {
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+      hour12: false
+    })
   })
   ElMessage.success('已紧急关闭所有门禁')
 }
@@ -461,10 +536,35 @@ const showDoorDetails = (door) => {
   showDetails.value = true
 }
 
-// 刷新记录
+// 更新刷新记录方法
 const refreshRecords = () => {
-  accessRecords.value = Array.from({ length: 20 }, () => generateRandomRecord())
+  // 清空现有记录
+  accessRecords.value = []
+  // 立即添加一批新记录
+  for (let i = 0; i < 20; i++) {
+    accessRecords.value.unshift(generateRandomRecord())
+  }
   ElMessage.success('记录已更新')
+}
+
+// 格式化时间显示
+const formatTimeAgo = (timestamp) => {
+  const now = Date.now()
+  const diff = now - new Date(timestamp).getTime()
+  
+  const minutes = Math.floor(diff / 60000)
+  const hours = Math.floor(minutes / 60)
+  const days = Math.floor(hours / 24)
+  
+  if (days > 0) {
+    return `${days}天前`
+  } else if (hours > 0) {
+    return `${hours}小时前`
+  } else if (minutes > 0) {
+    return `${minutes}分钟前`
+  } else {
+    return '刚刚'
+  }
 }
 </script>
 
