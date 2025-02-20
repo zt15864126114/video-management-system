@@ -8,7 +8,7 @@
       <el-menu
         :router="true"
         :collapse="isCollapse"
-        default-active="/video-monitor"
+        :default-active="$route.path"
         class="el-menu-vertical"
         background-color="#001529"
         text-color="#fff"

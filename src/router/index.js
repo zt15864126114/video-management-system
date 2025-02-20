@@ -9,7 +9,7 @@ const routes = [
     path: '/welcome',
     name: 'Welcome',
     component: () => import('../views/Welcome.vue'),
-    meta: { title: '欢迎' }
+    meta: { title: '首页' }
   },
   {
     path: '/video-monitor',
@@ -53,7 +53,7 @@ const routes = [
       },
       {
         path: 'control',
-        name: 'AccessControlSettings',
+        name: 'AccessControl',
         component: () => import('../views/access/AccessControl.vue'),
         meta: { title: '门禁控制' }
       }
@@ -97,12 +97,41 @@ const routes = [
         meta: { title: '系统日志' }
       }
     ]
+  },
+  // 404页面路由
+  {
+    path: '/404',
+    name: 'NotFound',
+    component: () => import('../views/error/404.vue'),
+    meta: { title: '页面未找到' }
+  },
+  // 未匹配路由重定向到404
+  {
+    path: '/:pathMatch(.*)*',
+    redirect: '/404'
   }
 ]
 
 const router = createRouter({
-  history: createWebHistory(),
+  history: createWebHistory('/video-management-system/'),
   routes
+})
+
+// 全局前置守卫
+router.beforeEach((to, from, next) => {
+  // 更新页面标题
+  document.title = to.meta.title 
+    ? `${to.meta.title} - 校园安全管理系统` 
+    : '校园安全管理系统'
+  
+  // 处理基础路径
+  const base = '/video-management-system'
+  if (to.path.startsWith(base)) {
+    const path = to.path.slice(base.length) || '/'
+    next({ path, replace: true })
+    return
+  }
+  next()
 })
 
 export default router 
