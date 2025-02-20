@@ -1,1 +1,0 @@
-import{_ as o}from"./main-Cako4ZLr.js";import{T as t,o as s,b as r,r as c}from"./vendor-B1sSQAux.js";const a={},n={class:"system-layout"};function _(m,d){const e=c("router-view");return s(),t("div",n,[r(e)])}const p=o(a,[["render",_],["__scopeId","data-v-f2eea5b7"]]);export{p as default};
