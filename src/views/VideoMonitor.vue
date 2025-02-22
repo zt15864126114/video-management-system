@@ -1,95 +1,175 @@
 <template>
   <div class="video-monitor">
-    <div class="monitor-layout">
-      <div class="left-panel">
-        <el-card class="camera-list">
-          <template #header>
-            <div class="card-header">
-              <span>监控点位列表</span>
-              <el-input
-                v-model="searchQuery"
-                placeholder="搜索监控点"
-                prefix-icon="Search"
-                clearable
-                size="small"
-              />
-            </div>
-          </template>
-          <el-tree
-            :data="filteredCameraList"
-            :props="defaultProps"
-            @node-click="handleNodeClick"
-            :highlight-current="true"
-            :expand-on-click-node="false"
-            :default-expanded-keys="['1', '2', '3']"
+    <!-- 左侧监控点位列表 -->
+    <div class="left-panel">
+      <div class="monitor-list">
+        <div class="list-header">
+          <div class="header-title">
+            <el-icon><VideoCamera /></el-icon>
+            <span>监控点位</span>
+          </div>
+          <el-input
+            v-model="searchQuery"
+            placeholder="搜索监控点"
+            prefix-icon="Search"
+            clearable
+            size="small"
           />
-        </el-card>
+        </div>
+        <div class="list-content">
+          <div 
+            v-for="camera in filteredCameraList" 
+            :key="camera.id"
+            class="camera-item"
+            :class="{ active: currentCamera?.id === camera.id }"
+            @click="selectCamera(camera)"
+          >
+            <div class="camera-item-left">
+              <el-icon><VideoCamera /></el-icon>
+              <span class="camera-name">{{ camera.label }}</span>
+            </div>
+            <div class="status-tag" :class="camera.status">
+              {{ camera.status === 'online' ? '在线' : '离线' }}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 右侧监控画面 -->
+    <div class="right-panel">
+      <!-- 顶部工具栏 -->
+      <div class="toolbar">
+        <div class="toolbar-left">
+          <div class="time-display">
+            <div class="current-time">{{ currentTime }}</div>
+            <div class="current-date">{{ currentDate }}</div>
+          </div>
+          <el-button-group>
+            <el-button 
+              :type="layoutMode === '1' ? 'primary' : ''" 
+              @click="switchLayout('1')"
+            >
+              <el-icon><Monitor /></el-icon>单屏
+            </el-button>
+            <el-button 
+              :type="layoutMode === '4' ? 'primary' : ''" 
+              @click="switchLayout('4')"
+            >
+              <el-icon><Grid /></el-icon>四分屏
+            </el-button>
+            <el-button 
+              :type="layoutMode === '9' ? 'primary' : ''" 
+              @click="switchLayout('9')"
+            >
+              <el-icon><Grid /></el-icon>九分屏
+            </el-button>
+          </el-button-group>
+        </div>
+        <div class="toolbar-right">
+          <el-button-group>
+            <el-button 
+              type="primary" 
+              :loading="isCapturing"
+              @click="handleSnapshot"
+            >
+              <el-icon><Camera /></el-icon>抓拍
+            </el-button>
+            <el-button 
+              :type="isRecording ? 'danger' : 'primary'"
+              @click="handleRecord"
+            >
+              <el-icon><VideoCamera /></el-icon>
+              {{ isRecording ? '停止录制' : '开始录制' }}
+            </el-button>
+          </el-button-group>
+        </div>
       </div>
 
-      <div class="main-panel">
-        <div class="video-container">
-          <div class="toolbar">
-            <div class="toolbar-left">
-              <div class="time-display">
-                <div class="current-time">{{ currentTime }}</div>
-                <div class="current-date">{{ currentDate }}</div>
+      <!-- 监控画面网格 -->
+      <div class="video-grid" :data-layout="layoutMode">
+        <div 
+          v-for="(camera, index) in displayCameras" 
+          :key="camera.id" 
+          class="video-item"
+          :class="{ 'is-active': currentCamera?.id === camera.id }"
+          @click="selectCamera(camera)"
+        >
+          <el-image 
+            :src="camera.imageUrl"
+            fit="cover"
+            :preview-src-list="[camera.imageUrl]"
+          >
+            <template #error>
+              <div class="image-error">
+                <el-icon><VideoCamera /></el-icon>
+                <span>画面未连接</span>
               </div>
-              <el-button-group>
-                <el-button :type="layoutMode === '1' ? 'primary' : ''" @click="layoutMode = '1'">
-                  <el-icon><Monitor /></el-icon>单屏
-                </el-button>
-                <el-button :type="layoutMode === '4' ? 'primary' : ''" @click="layoutMode = '4'">
-                  <el-icon><Grid /></el-icon>四分屏
-                </el-button>
-                <el-button :type="layoutMode === '9' ? 'primary' : ''" @click="layoutMode = '9'">
-                  <el-icon><Grid /></el-icon>九分屏
-                </el-button>
-              </el-button-group>
+            </template>
+          </el-image>
+          <!-- 监控画面顶部信息 -->
+          <div class="camera-overlay camera-header">
+            <span class="real-time-tag">实时监控</span>
+            <span class="timestamp">{{ currentTime }}</span>
+          </div>
+          <!-- 监控画面底部信息 -->
+          <div class="camera-overlay camera-footer">
+            <div class="camera-details">
+              <span class="monitor-name">{{ camera.label }}</span>
+              <span class="camera-id">设备编号：Camera_0{{ camera.id }}</span>
             </div>
-            <div class="toolbar-right">
-              <el-button-group>
-                <el-button :icon="ArrowUp" circle @click="handlePTZControl('up')" />
-                <el-button :icon="ArrowDown" circle @click="handlePTZControl('down')" />
-                <el-button :icon="ArrowLeft" circle @click="handlePTZControl('left')" />
-                <el-button :icon="ArrowRight" circle @click="handlePTZControl('right')" />
-              </el-button-group>
-              <el-button-group>
-                <el-button :icon="ZoomIn" circle @click="handlePTZControl('zoomIn')" />
-                <el-button :icon="ZoomOut" circle @click="handlePTZControl('zoomOut')" />
-              </el-button-group>
-              <el-button type="primary" plain @click="handleSnapshot">
-                <el-icon><Camera /></el-icon>抓拍
-              </el-button>
-              <el-button type="danger" plain @click="handleRecord">
-                <el-icon><VideoCamera /></el-icon>录制
-              </el-button>
+            <div class="camera-status" :class="camera.status">
+              <span class="status-dot"></span>
+              <span>{{ camera.status === 'online' ? '在线' : '离线' }}</span>
             </div>
           </div>
+        </div>
+      </div>
 
-          <div class="video-grid" :data-layout="layoutMode">
-            <div 
-              v-for="camera in displayCameras" 
-              :key="camera.id" 
-              class="video-item"
-              :class="{ 'is-active': currentCamera?.id === camera.id }"
-              @click="selectCamera(camera)"
-            >
-              <video-player 
-                :stream="camera.stream"
-                :camera-info="camera"
-                @error="handleVideoError"
-              />
-              <div class="camera-info">
-                <div class="camera-info-left">
-                  <span class="camera-name">{{ camera.label }}</span>
-                  <span class="camera-time">{{ currentTime }}</span>
-                </div>
-                <el-tag size="small" :type="camera.status === 'online' ? 'success' : 'danger'">
-                  {{ camera.status === 'online' ? '在线' : '离线' }}
-                </el-tag>
-              </div>
-            </div>
-          </div>
+      <!-- 底部控制面板 -->
+      <div class="control-panel">
+        <div class="panel-title">云台控制</div>
+        <div class="control-buttons">
+          <el-button-group class="direction-group">
+            <el-button 
+              :icon="ArrowUp" 
+              circle 
+              :disabled="!currentCamera || currentCamera.status === 'offline'"
+              @click="handlePTZControl('up')" 
+            />
+            <el-button 
+              :icon="ArrowDown" 
+              circle 
+              :disabled="!currentCamera || currentCamera.status === 'offline'"
+              @click="handlePTZControl('down')" 
+            />
+            <el-button 
+              :icon="ArrowLeft" 
+              circle 
+              :disabled="!currentCamera || currentCamera.status === 'offline'"
+              @click="handlePTZControl('left')" 
+            />
+            <el-button 
+              :icon="ArrowRight" 
+              circle 
+              :disabled="!currentCamera || currentCamera.status === 'offline'"
+              @click="handlePTZControl('right')" 
+            />
+          </el-button-group>
+          <el-button-group class="zoom-group">
+            <el-button 
+              :icon="ZoomIn" 
+              circle 
+              :disabled="!currentCamera || currentCamera.status === 'offline'"
+              @click="handlePTZControl('zoomIn')" 
+            />
+            <el-button 
+              :icon="ZoomOut" 
+              circle 
+              :disabled="!currentCamera || currentCamera.status === 'offline'"
+              @click="handlePTZControl('zoomOut')" 
+            />
+          </el-button-group>
         </div>
       </div>
     </div>
@@ -99,16 +179,18 @@
 <script setup>
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { 
-  Search, Monitor, Grid, Camera, VideoCamera,
+  Search, Monitor, Grid, VideoPlay, Camera,
   ArrowUp, ArrowDown, ArrowLeft, ArrowRight,
   ZoomIn, ZoomOut
 } from '@element-plus/icons-vue'
-import VideoPlayer from '../components/VideoPlayer.vue'
 import { ElMessage } from 'element-plus'
 
+// 搜索和布局
 const searchQuery = ref('')
 const layoutMode = ref('4')
 const currentCamera = ref(null)
+const isCapturing = ref(false)
+const isRecording = ref(false)
 
 // 时间相关
 const currentTime = ref('')
@@ -142,168 +224,287 @@ onUnmounted(() => {
   }
 })
 
-const cameraList = ref([
+// 摄像头数据
+const cameras = ref([
   {
-    id: '1',
-    label: '教学区',
-    children: [
-      { id: 'camera-1', label: '一号教学楼大门', stream: 'stream-1', status: 'online' },
-      { id: 'camera-2', label: '二号教学楼大门', stream: 'stream-2', status: 'online' },
-      { id: 'camera-3', label: '教学楼走廊', stream: 'stream-3', status: 'online' },
-      { id: 'camera-4', label: '图书馆门口', stream: 'stream-4', status: 'online' }
-    ]
+    id: 1,
+    label: '校门监控点',
+    location: '正门入口',
+    status: 'online',
+    imageUrl: new URL('../assets/images/monitor/gate.png', import.meta.url).href
   },
   {
-    id: '2',
-    label: '生活区',
-    children: [
-      { id: 'camera-5', label: '一号宿舍楼', stream: 'stream-5', status: 'online' },
-      { id: 'camera-6', label: '二号宿舍楼', stream: 'stream-6', status: 'offline' },
-      { id: 'camera-7', label: '食堂大门', stream: 'stream-7', status: 'online' },
-      { id: 'camera-8', label: '超市门口', stream: 'stream-8', status: 'online' }
-    ]
+    id: 2,
+    label: '教学楼监控点',
+    location: '教学楼一层大厅',
+    status: 'online',
+    imageUrl: new URL('../assets/images/monitor/building.png', import.meta.url).href
   },
   {
-    id: '3',
-    label: '运动区',
-    children: [
-      { id: 'camera-9', label: '操场北', stream: 'stream-9', status: 'online' },
-      { id: 'camera-10', label: '操场南', stream: 'stream-10', status: 'online' },
-      { id: 'camera-11', label: '体育馆', stream: 'stream-11', status: 'online' },
-      { id: 'camera-12', label: '游泳馆', stream: 'stream-12', status: 'offline' }
-    ]
+    id: 3,
+    label: '操场监控点',
+    location: '操场北侧看台',
+    status: 'online',
+    imageUrl: new URL('../assets/images/monitor/playground.jpg', import.meta.url).href
+  },
+  {
+    id: 4,
+    label: '图书馆监控点',
+    location: '图书馆入口',
+    status: 'online',
+    imageUrl: new URL('../assets/images/monitor/library.jpg', import.meta.url).href
+  },
+  {
+    id: 5,
+    label: '食堂监控点',
+    location: '食堂一楼大厅',
+    status: 'online',
+    imageUrl: new URL('../assets/images/monitor/canteen.jpg', import.meta.url).href
+  },
+  {
+    id: 6,
+    label: '宿舍楼监控点',
+    location: '宿舍楼大门',
+    status: 'offline',
+    imageUrl: new URL('../assets/images/monitor/dormitory.jpg', import.meta.url).href
+  },
+  {
+    id: 7,
+    label: '体育馆监控点',
+    location: '体育馆入口',
+    status: 'online',
+    imageUrl: new URL('../assets/images/monitor/gym.jpg', import.meta.url).href
+  },
+  {
+    id: 8,
+    label: '实验室监控点',
+    location: '实验室一层',
+    status: 'online',
+    imageUrl: new URL('../assets/images/monitor/lab.jpg', import.meta.url).href
+  },
+  {
+    id: 9,
+    label: '停车场监控点',
+    location: '停车场入口',
+    status: 'online',
+    imageUrl: new URL('../assets/images/monitor/parking.jpg', import.meta.url).href
+  },
+  {
+    id: 10,
+    label: '运动场监控点',
+    location: '运动场南侧',
+    status: 'online',
+    imageUrl: new URL('../assets/images/monitor/sports.jpg', import.meta.url).href
   }
 ])
 
-// 获取所有摄像头
-const allCameras = computed(() => {
-  const cameras = []
-  cameraList.value.forEach(group => {
-    if (group.children) {
-      cameras.push(...group.children)
-    }
-  })
-  return cameras
+// 计算属性
+const filteredCameraList = computed(() => {
+  if (!searchQuery.value) return cameras.value
+  const query = searchQuery.value.toLowerCase()
+  return cameras.value.filter(camera => 
+    camera.label.toLowerCase().includes(query) ||
+    camera.location.toLowerCase().includes(query)
+  )
 })
 
-// 根据布局模式显示摄像头
 const displayCameras = computed(() => {
   const count = parseInt(layoutMode.value)
-  return allCameras.value.slice(0, count)
-})
-
-// 过滤摄像头列表
-const filteredCameraList = computed(() => {
-  if (!searchQuery.value) return cameraList.value
-  
-  const query = searchQuery.value.toLowerCase()
-  return cameraList.value.map(group => {
-    const filteredChildren = group.children.filter(camera =>
-      camera.label.toLowerCase().includes(query)
-    )
-    return filteredChildren.length ? {
-      ...group,
-      children: filteredChildren
-    } : null
-  }).filter(Boolean)
-})
-
-const defaultProps = {
-  children: 'children',
-  label: 'label'
-}
-
-const handleNodeClick = (data) => {
-  if (!data.children) {
-    selectCamera(data)
+  if (layoutMode.value === '1' && currentCamera.value) {
+    return [currentCamera.value]
   }
-}
+  return cameras.value.slice(0, count)
+})
 
+// 方法
 const selectCamera = (camera) => {
   currentCamera.value = camera
-  layoutMode.value = '1' // 切换到单屏模式
+  if (layoutMode.value !== '1') {
+    layoutMode.value = '1'
+  }
 }
 
-const handleVideoError = (error) => {
-  ElMessage.error(`视频加载失败: ${error}`)
+const switchLayout = (mode) => {
+  layoutMode.value = mode
+  if (mode !== '1') {
+    currentCamera.value = null
+  }
 }
 
-const handlePTZControl = (direction) => {
+const handleSnapshot = async () => {
   if (!currentCamera.value) {
-    ElMessage.warning('请先选择摄像头')
+    ElMessage.warning('请先选择一个监控点')
     return
   }
-  console.log('PTZ控制:', direction)
-  ElMessage.success(`正在${direction}`)
-}
-
-const handleSnapshot = () => {
-  if (!currentCamera.value) {
-    ElMessage.warning('请先选择摄像头')
-    return
+  
+  isCapturing.value = true
+  try {
+    // 模拟抓拍操作
+    await new Promise(resolve => setTimeout(resolve, 1000))
+    ElMessage.success('抓拍成功')
+  } catch (error) {
+    ElMessage.error('抓拍失败')
+  } finally {
+    isCapturing.value = false
   }
-  ElMessage.success('已抓拍当前画面')
 }
 
 const handleRecord = () => {
   if (!currentCamera.value) {
-    ElMessage.warning('请先选择摄像头')
+    ElMessage.warning('请先选择一个监控点')
     return
   }
-  ElMessage.success('开始录制视频')
+  
+  isRecording.value = !isRecording.value
+  ElMessage.success(isRecording.value ? '开始录制' : '停止录制')
+}
+
+const handlePTZControl = (direction) => {
+  if (!currentCamera.value) {
+    ElMessage.warning('请先选择一个监控点')
+    return
+  }
+  
+  ElMessage.success(`云台控制: ${direction}`)
 }
 </script>
 
 <style scoped>
 .video-monitor {
-  height: calc(100vh - 90px);
-  padding: 20px;
-}
-
-.monitor-layout {
-  display: grid;
-  grid-template-columns: 280px 1fr;
-  gap: 20px;
-  height: 100%;
+  height: 100vh;
+  display: flex;
+  background-color: #f0f2f5;
 }
 
 .left-panel {
-  height: 100%;
+  width: 280px;
+  padding: 16px;
+  background: #fff;
+  border-right: 1px solid #e0e0e0;
 }
 
-.main-panel {
-  height: 100%;
+.right-panel {
+  flex: 1;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
 }
 
-.video-container {
-  background-color: #f5f7fa;
-  padding: 20px;
-  border-radius: 4px;
-  position: relative;
+.monitor-list {
   height: 100%;
   display: flex;
   flex-direction: column;
+}
+
+.list-header {
+  padding-bottom: 16px;
+  border-bottom: 1px solid #e0e0e0;
+}
+
+.header-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 16px;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.list-content {
+  flex: 1;
+  overflow-y: auto;
+  padding: 8px 0;
+}
+
+.camera-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px;
+  margin: 4px 0;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.3s;
+}
+
+.camera-item:hover {
+  background: #f5f7fa;
+}
+
+.camera-item.active {
+  background: #e6f6ff;
+  border-right: 2px solid #1890ff;
+}
+
+.camera-item-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.camera-name {
+  font-size: 14px;
+}
+
+.status-tag {
+  padding: 2px 8px;
+  border-radius: 10px;
+  font-size: 12px;
+}
+
+.status-tag.online {
+  background: #e6f6ff;
+  color: #1890ff;
+}
+
+.status-tag.offline {
+  background: #fff1f0;
+  color: #f5222d;
 }
 
 .toolbar {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 16px;
+  padding: 16px;
+  background: #fff;
+  border-radius: 4px;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.1);
 }
 
 .toolbar-left,
 .toolbar-right {
   display: flex;
-  gap: 8px;
+  align-items: center;
+  gap: 16px;
+}
+
+.time-display {
+  padding: 8px 16px;
+  background: #f5f7fa;
+  border-radius: 4px;
+}
+
+.current-time {
+  font-size: 20px;
+  font-weight: bold;
+  color: #1890ff;
+}
+
+.current-date {
+  font-size: 12px;
+  color: #666;
 }
 
 .video-grid {
+  flex: 1;
   display: grid;
   gap: 16px;
-  flex: 1;
-  aspect-ratio: 16/9;
-  min-height: 0;
+  background: #fff;
+  padding: 16px;
+  border-radius: 4px;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.1);
 }
 
 .video-grid[data-layout="1"] {
@@ -327,95 +528,129 @@ const handleRecord = () => {
   overflow: hidden;
   cursor: pointer;
   transition: all 0.3s;
+  aspect-ratio: 16/9;
 }
 
 .video-item:hover {
-  transform: scale(1.02);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  transform: scale(1.01);
 }
 
 .video-item.is-active {
-  box-shadow: 0 0 0 2px #409EFF;
+  box-shadow: 0 0 0 2px #1890ff;
 }
 
-.camera-info {
+.camera-overlay {
   position: absolute;
-  bottom: 0;
   left: 0;
   right: 0;
-  padding: 8px;
-  background: rgba(0, 0, 0, 0.6);
+  padding: 8px 12px;
   color: #fff;
+  font-size: 14px;
+  z-index: 2;
+}
+
+.camera-header {
+  top: 0;
   display: flex;
   justify-content: space-between;
   align-items: center;
+  background: linear-gradient(to bottom, rgba(0,0,0,0.6), transparent);
 }
 
-.camera-info-left {
+.camera-footer {
+  bottom: 0;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  background: linear-gradient(to top, rgba(0,0,0,0.6), transparent);
+}
+
+.real-time-tag {
+  background-color: rgba(40, 167, 69, 0.8);
+  padding: 2px 8px;
+  border-radius: 2px;
+  font-size: 12px;
+}
+
+.timestamp {
+  font-family: monospace;
+  font-size: 14px;
+}
+
+.camera-details {
   display: flex;
   flex-direction: column;
   gap: 4px;
 }
 
-.camera-name {
+.monitor-name {
   font-size: 14px;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  font-weight: 500;
 }
 
-.camera-time {
+.camera-id,
+.resolution {
   font-size: 12px;
   opacity: 0.8;
-  font-family: monospace;
 }
 
-.camera-list {
+.camera-status {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+}
+
+.status-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background-color: currentColor;
+}
+
+.camera-status.online {
+  color: #52c41a;
+}
+
+.camera-status.offline {
+  color: #ff4d4f;
+}
+
+.control-panel {
+  padding: 16px;
+  background: #fff;
+  border-radius: 4px;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+}
+
+.panel-title {
+  margin-bottom: 16px;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.control-buttons {
+  display: flex;
+  gap: 16px;
+}
+
+.el-image {
+  width: 100%;
+  height: 100%;
+}
+
+.image-error {
   height: 100%;
   display: flex;
   flex-direction: column;
-}
-
-.camera-list :deep(.el-card__body) {
-  flex: 1;
-  overflow: auto;
-}
-
-.toolbar-right {
-  display: flex;
-  gap: 12px;
+  justify-content: center;
   align-items: center;
+  color: #999;
+  background: #f5f7fa;
 }
 
-.toolbar-right .el-button-group {
-  margin-right: 8px;
-}
-
-.toolbar-right .el-button-group .el-button {
-  padding: 8px;
-}
-
-.toolbar-right .el-button-group + .el-button-group {
-  margin-left: 0;
-}
-
-.time-display {
-  background: rgba(0, 0, 0, 0.6);
-  padding: 8px 16px;
-  border-radius: 4px;
-  margin-right: 16px;
-  color: #fff;
-  font-family: monospace;
-}
-
-.current-time {
-  font-size: 20px;
-  font-weight: bold;
-  line-height: 1.2;
-}
-
-.current-date {
-  font-size: 12px;
-  opacity: 0.8;
+.image-error .el-icon {
+  font-size: 32px;
+  margin-bottom: 8px;
 }
 </style> 
