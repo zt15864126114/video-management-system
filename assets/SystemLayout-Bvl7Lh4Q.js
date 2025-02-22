@@ -1,0 +1,1 @@
+import{_ as o,c as t,b as s,d as c,f as a}from"./index-DcPop_mE.js";const r={},n={class:"system-layout"};function _(d,f){const e=a("router-view");return s(),t("div",n,[c(e)])}const i=o(r,[["render",_],["__scopeId","data-v-f2eea5b7"]]);export{i as default};
