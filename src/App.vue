@@ -2,7 +2,7 @@
   <el-container class="app-container">
     <el-aside :width="isCollapse ? '64px' : '220px'" class="aside">
       <div class="logo" :class="{ 'collapsed': isCollapse }">
-        <img src="./assets/logo.png" alt="logo" />
+        <el-icon size="32" color="#fff"><Monitor /></el-icon>
         <span v-show="!isCollapse">校园安全管理平台</span>
       </div>
       <el-menu
@@ -130,7 +130,7 @@
 <script setup>
 import { ref } from 'vue'
 import { 
-  VideoCamera, Van, Lock, AlarmClock, Bell, 
+  VideoCamera, Van, Lock, AlarmClock, Bell, School, 
   Expand, Fold, CaretBottom, User, Edit, SwitchButton, Setting, Monitor, Document, Tools, UserFilled, List 
 } from '@element-plus/icons-vue'
 import Breadcrumb from './components/Breadcrumb.vue'
@@ -175,7 +175,7 @@ html, body {
   padding: 0 24px;
   display: flex;
   align-items: center;
-  background: linear-gradient(to right, #1a237e, #0d47a1);
+  background: #001529;
   color: #fff;
   overflow: hidden;
   transition: all 0.3s;
@@ -188,12 +188,11 @@ html, body {
   justify-content: center;
 }
 
-.logo img {
+.logo .el-icon {
   width: 32px;
   height: 32px;
   margin-right: 16px;
   transition: all 0.3s;
-  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.2));
 }
 
 .logo span {

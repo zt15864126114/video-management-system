@@ -228,31 +228,31 @@ onUnmounted(() => {
 const cameras = ref([
   {
     id: 1,
-    label: '校门监控点',
+    label: '楼道检测点',
     location: '正门入口',
     status: 'online',
     imageUrl: new URL('../assets/images/monitor/gate.png', import.meta.url).href
   },
   {
     id: 2,
-    label: '教学楼监控点',
+    label: '停车场监测点',
     location: '教学楼一层大厅',
     status: 'online',
     imageUrl: new URL('../assets/images/monitor/building.png', import.meta.url).href
   },
   {
     id: 3,
-    label: '操场监控点',
+    label: '男生宿舍监控点',
     location: '操场北侧看台',
     status: 'online',
-    imageUrl: new URL('../assets/images/monitor/playground.jpg', import.meta.url).href
+    imageUrl: new URL('../assets/images/monitor/image.png', import.meta.url).href
   },
   {
     id: 4,
-    label: '图书馆监控点',
+    label: '操场监控点',
     location: '图书馆入口',
     status: 'online',
-    imageUrl: new URL('../assets/images/monitor/library.jpg', import.meta.url).href
+    imageUrl: new URL('../assets/images/monitor/222.png', import.meta.url).href
   },
   {
     id: 5,
@@ -292,6 +292,41 @@ const cameras = ref([
   {
     id: 10,
     label: '运动场监控点',
+    location: '运动场南侧',
+    status: 'online',
+    imageUrl: new URL('../assets/images/monitor/sports.jpg', import.meta.url).href
+  },
+  {
+    id: 10,
+    label: '教学楼检测点',
+    location: '运动场南侧',
+    status: 'online',
+    imageUrl: new URL('../assets/images/monitor/sports.jpg', import.meta.url).href
+  },
+  {
+    id: 11,
+    label: '男生宿舍楼监控点',
+    location: '运动场南侧',
+    status: 'online',
+    imageUrl: new URL('../assets/images/monitor/sports.jpg', import.meta.url).href
+  },
+  {
+    id: 12,
+    label: '女生宿舍楼监控点',
+    location: '运动场南侧',
+    status: 'online',
+    imageUrl: new URL('../assets/images/monitor/sports.jpg', import.meta.url).href
+  },
+  {
+    id: 13,
+    label: '运动场监控点',
+    location: '运动场南侧',
+    status: 'online',
+    imageUrl: new URL('../assets/images/monitor/sports.jpg', import.meta.url).href
+  },
+  {
+    id: 14,
+    label: '大门监控点',
     location: '运动场南侧',
     status: 'online',
     imageUrl: new URL('../assets/images/monitor/sports.jpg', import.meta.url).href
