@@ -1,504 +1,633 @@
 <template>
   <div class="vehicle-monitor">
-    <!-- 统计卡片 -->
-    <div class="statistics-row">
-      <div v-for="stat in statsData" :key="stat.label" class="stat-card">
-        <div class="stat-icon" :class="stat.type">
-          <el-icon><component :is="stat.icon" /></el-icon>
+    <div class="monitor-layout">
+      <!-- 左侧监控列表 -->
+      <div class="camera-list">
+        <div class="list-header">
+          <el-input
+            v-model="searchKey"
+            placeholder="搜索监控点"
+            prefix-icon="Search"
+            clearable
+            size="small"
+          />
         </div>
-        <div class="stat-info">
-          <div class="stat-value">{{ stat.value }}</div>
-          <div class="stat-label">{{ stat.label }}</div>
-          <div v-if="stat.trend" class="stat-trend" :class="stat.trend > 0 ? 'up' : 'down'">
-            {{ Math.abs(stat.trend) }}% {{ stat.trend > 0 ? '↑' : '↓' }}
+        <div class="list-content">
+          <div
+            v-for="camera in filteredCameras"
+            :key="camera.id"
+            class="camera-item"
+            :class="{ active: currentCamera === camera.id }"
+            @click="switchCamera(camera)"
+          >
+            <div class="camera-info">
+              <el-icon><VideoCamera /></el-icon>
+              <div class="camera-text">
+                <span class="name">{{ camera.name }}</span>
+                <span class="location">{{ camera.location }}</span>
+              </div>
+            </div>
+            <el-tag 
+              size="small" 
+              :type="camera.status === 'online' ? 'success' : 'danger'"
+            >
+              {{ camera.status === 'online' ? '在线' : '离线' }}
+            </el-tag>
+          </div>
+        </div>
+      </div>
+
+      <!-- 中间监控区域 - 简化结构 -->
+      <div class="monitor-main">
+        <div class="video-header">
+          <div class="camera-title">
+            <span class="title">{{ getCurrentCamera?.name }}</span>
+            <span class="subtitle">{{ getCurrentCamera?.location }}</span>
+          </div>
+          <div class="control-buttons">
+            <el-button-group>
+              <el-button type="primary" size="small" @click="handleCapture">
+                <el-icon><Camera /></el-icon>抓拍
+              </el-button>
+              <el-button type="warning" size="small" @click="handleAlert">
+                <el-icon><Warning /></el-icon>报警
+              </el-button>
+              <el-button size="small" @click="handleFullscreen">
+                <el-icon><FullScreen /></el-icon>全屏
+              </el-button>
+            </el-button-group>
+          </div>
+        </div>
+        
+        <!-- 视频区域 - 简化结构 -->
+        <div class="video-wrapper">
+          <video-player 
+            :stream="currentCamera"
+            :camera-info="getCurrentCamera"
+            class="video-player"
+          />
+        </div>
+      </div>
+
+      <!-- 右侧信息区域 -->
+      <div class="info-panel">
+        <div class="panel-section">
+          <div class="section-title">实时识别</div>
+          <div class="vehicle-info" v-if="currentVehicle">
+            <div class="plate-info">
+              <span class="plate-number">{{ currentVehicle.plateNumber }}</span>
+              <el-tag size="small" :type="currentVehicle.status === '正常' ? 'success' : 'warning'">
+                {{ currentVehicle.status }}
+              </el-tag>
+            </div>
+            <div class="info-table">
+              <div class="info-row">
+                <span class="label">类型：</span>
+                <span class="value">{{ currentVehicle.type }}</span>
+              </div>
+              <div class="info-row">
+                <span class="label">颜色：</span>
+                <span class="value">{{ currentVehicle.color }}</span>
+              </div>
+              <div class="info-row">
+                <span class="label">部门：</span>
+                <span class="value">{{ currentVehicle.department }}</span>
+              </div>
+              <div class="info-row">
+                <span class="label">时间：</span>
+                <span class="value time">{{ currentVehicle.time }}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="panel-section">
+          <div class="section-title">今日统计</div>
+          <div class="stat-grid">
+            <div class="stat-item">
+              <span class="number">{{ statistics.todayCount }}</span>
+              <span class="label">通行总数</span>
+            </div>
+            <div class="stat-item">
+              <span class="number">{{ statistics.currentCount }}</span>
+              <span class="label">当前在场</span>
+            </div>
+            <div class="stat-item warning">
+              <span class="number">{{ statistics.warningCount }}</span>
+              <span class="label">异常记录</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="panel-section">
+          <div class="section-title">最近记录</div>
+          <div class="record-list">
+            <div v-for="(record, index) in captureRecords" 
+                 :key="index" 
+                 class="record-item"
+            >
+              <div class="record-info">
+                <span class="record-plate">{{ record.plateNumber }}</span>
+                <span class="record-time">{{ record.time }}</span>
+              </div>
+            </div>
           </div>
         </div>
       </div>
     </div>
-
-    <!-- 监控内容 -->
-    <el-row :gutter="20">
-      <!-- 左侧视频监控 -->
-      <el-col :span="16">
-        <el-card class="monitor-card">
-          <template #header>
-            <div class="card-header">
-              <div class="header-left">
-                <el-select v-model="currentCamera" placeholder="选择监控点" class="camera-select">
-                  <el-option
-                    v-for="camera in cameras"
-                    :key="camera.id"
-                    :label="camera.name"
-                    :value="camera.id"
-                  />
-                </el-select>
-                <el-tag :type="isAnalyzing ? 'success' : 'info'" class="analysis-status">
-                  {{ isAnalyzing ? '分析中' : '未分析' }}
-                </el-tag>
-              </div>
-              <el-button-group>
-                <el-button 
-                  type="primary" 
-                  :icon="VideoPlay"
-                  @click="toggleAnalysis"
-                >
-                  {{ isAnalyzing ? '停止分析' : '开始分析' }}
-                </el-button>
-                <el-button 
-                  type="warning" 
-                  :icon="Camera"
-                  @click="handleSnapshot"
-                >抓拍</el-button>
-              </el-button-group>
-            </div>
-          </template>
-          
-          <div class="video-container">
-            <div class="video-player">
-              <video-player ref="videoPlayer" class="video-content" />
-              <div v-if="isAnalyzing" class="analysis-overlay">
-                <div 
-                  v-for="detection in currentDetections" 
-                  :key="detection.id"
-                  class="detection-box"
-                  :style="detection.style"
-                >
-                  <div class="detection-info">
-                    {{ detection.plateNumber }}
-                    <el-tag size="small" :type="detection.type">{{ detection.status }}</el-tag>
-                  </div>
-                </div>
-              </div>
-            </div>
-            <div class="analysis-panel">
-              <div class="panel-header">
-                <span>实时分析结果</span>
-                <el-switch v-model="showTrajectory" active-text="显示轨迹" />
-              </div>
-              <div class="analysis-content">
-                <div v-for="result in analysisResults" :key="result.id" class="analysis-item">
-                  <el-avatar :size="40" :src="result.snapshot" />
-                  <div class="result-info">
-                    <div class="plate-number">{{ result.plateNumber }}</div>
-                    <div class="detail-info">
-                      <span>{{ result.time }}</span>
-                      <el-tag size="small" :type="result.type">{{ result.status }}</el-tag>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </el-card>
-      </el-col>
-      
-      <!-- 右侧实时记录 -->
-      <el-col :span="8">
-        <el-card class="record-card">
-          <template #header>
-            <div class="card-header">
-              <span>通行记录</span>
-              <el-radio-group v-model="recordType" size="small">
-                <el-radio-button label="all">全部</el-radio-button>
-                <el-radio-button label="violation">违规</el-radio-button>
-              </el-radio-group>
-            </div>
-          </template>
-          
-          <div class="records-list">
-            <div v-for="record in filteredRecords" :key="record.id" class="record-item">
-              <div class="record-header">
-                <span class="plate-number">{{ record.plateNumber }}</span>
-                <el-tag 
-                  size="small" 
-                  :type="record.type === 'normal' ? 'success' : 'danger'"
-                >
-                  {{ record.type === 'normal' ? '正常' : '违规' }}
-                </el-tag>
-              </div>
-              <div class="record-details">
-                <div class="record-info">
-                  <span>{{ record.location }}</span>
-                  <span class="record-time">{{ record.time }}</span>
-                </div>
-                <div v-if="record.violation" class="violation-info">
-                  <el-icon><Warning /></el-icon>
-                  <span>{{ record.violation }}</span>
-                </div>
-              </div>
-              <div class="record-image">
-                <el-image 
-                  :src="record.snapshot" 
-                  :preview-src-list="[record.snapshot]"
-                  fit="cover"
-                />
-              </div>
-            </div>
-          </div>
-        </el-card>
-      </el-col>
-    </el-row>
   </div>
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onUnmounted } from 'vue'
-import { VideoPlay, Camera, Warning } from '@element-plus/icons-vue'
+import { ref, computed, onMounted, watch, nextTick, onUnmounted } from 'vue'
+import { 
+  Camera, Warning, FullScreen, VideoCamera, 
+  Timer, CaretTop, VideoPlay 
+} from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
-import VideoPlayer from '../../components/VideoPlayer.vue'
+import VideoPlayer from '@/components/VideoPlayer.vue'
+import * as echarts from 'echarts'
+
+const searchKey = ref('')
+const filterStatus = ref('')
+const currentCamera = ref('camera-1')
+const videoContainer = ref(null)
+
+// 模拟数据
+const cameras = ref([
+  { id: 'camera-1', name: '正门入口', location: '校园正门', status: 'online' },
+  { id: 'camera-2', name: '后门入口', location: '校园后门', status: 'online' },
+  { id: 'camera-3', name: '地下车库', location: 'A区地下室', status: 'offline' },
+  { id: 'camera-4', name: '访客停车场', location: '西区停车场', status: 'online' },
+  { id: 'camera-5', name: '教学楼', location: 'B区教学楼', status: 'online' },
+  { id: 'camera-6', name: '运动场', location: 'C区运动场', status: 'online' },
+  { id: 'camera-7', name: '图书馆', location: 'D区图书馆', status: 'offline' },
+  { id: 'camera-8', name: '停车场', location: 'E区停车场', status: 'online' }
+])
 
 // 统计数据
-const statsData = ref([
-  {
-    label: '今日通行',
-    value: '1,245',
-    icon: 'Van',
-    type: 'primary',
-    trend: 15
-  },
-  {
-    label: '实时车流',
-    value: '86',
-    icon: 'DataLine',
-    type: 'success',
-    trend: 8
-  },
-  {
-    label: '违规记录',
-    value: '12',
-    icon: 'Warning',
-    type: 'danger',
-    trend: -5
-  }
-])
-
-// 监控点列表
-const cameras = ref([
-  { id: 1, name: '东门入口' },
-  { id: 2, name: '南门入口' },
-  { id: 3, name: '西门入口' },
-  { id: 4, name: '北门入口' },
-  { id: 5, name: '地下车库入口' }
-])
-
-// 当前选中的监控点
-const currentCamera = ref(1)
-
-// 分析状态
-const isAnalyzing = ref(false)
-const showTrajectory = ref(true)
-
-// 当前检测结果
-const currentDetections = ref([
-  {
-    id: 1,
-    plateNumber: '鲁H8A7B6',
-    status: '已登记',
-    type: 'success',
-    style: {
-      left: '120px',
-      top: '150px',
-      width: '180px',
-      height: '100px'
-    }
-  },
-  {
-    id: 2,
-    plateNumber: '鲁H2S8K9',
-    status: '已登记',
-    type: 'success',
-    style: {
-      left: '350px',
-      top: '200px',
-      width: '160px',
-      height: '90px'
-    }
-  }
-])
-
-// 分析结果
-const analysisResults = ref([
-  {
-    id: 1,
-    plateNumber: '鲁H8A7B6',
-    snapshot: 'path/to/snapshot1.jpg',
-    time: '10:30:45',
-    status: '正常通行',
-    type: 'success'
-  },
-  {
-    id: 2,
-    plateNumber: '鲁H2S8K9',
-    snapshot: 'path/to/snapshot2.jpg',
-    time: '10:29:30',
-    status: '正常通行',
-    type: 'success'
-  }
-])
-
-// 通行记录
-const records = ref([
-  {
-    id: 1,
-    plateNumber: '鲁H8A7B6',
-    type: 'normal',
-    location: '东门入口',
-    time: '10:30:45',
-    snapshot: 'path/to/snapshot1.jpg'
-  },
-  {
-    id: 2,
-    plateNumber: '鲁H1D8F3',
-    type: 'violation',
-    location: '南门入口',
-    time: '10:28:15',
-    violation: '未登记车辆',
-    snapshot: 'path/to/snapshot2.jpg'
-  }
-])
-
-// 记录类型
-const recordType = ref('all')
-
-// 过滤后的记录
-const filteredRecords = computed(() => {
-  if (recordType.value === 'all') return records.value
-  return records.value.filter(record => record.type === 'violation')
+const statistics = ref({
+  todayCount: 286,
+  currentCount: 156,
+  warningCount: 3
 })
 
-// 开始/停止分析
-const toggleAnalysis = () => {
-  isAnalyzing.value = !isAnalyzing.value
-  ElMessage.success(isAnalyzing.value ? '开始视频分析' : '停止视频分析')
+// 当前车辆信息
+const currentVehicle = ref({
+  plateNumber: '鲁HS2R45',
+  status: '正常',
+  time: new Date().toLocaleString(),
+  type: '小型轿车',
+  color: '黑色',
+  department: '教务处'
+})
+
+// 添加抓拍记录数据
+const captureRecords = ref([
+  {
+    plateNumber: '鲁HS2R45',
+    time: new Date(Date.now() - 300000).toLocaleTimeString()
+  },
+  {
+    plateNumber: '鲁H32821',
+    time: new Date(Date.now() - 240000).toLocaleTimeString()
+  },
+  {
+    plateNumber: '鲁H98789',
+    time: new Date(Date.now() - 180000).toLocaleTimeString()
+  },
+  {
+    plateNumber: '鲁H45638',
+    time: new Date(Date.now() - 120000).toLocaleTimeString()
+  },
+  {
+    plateNumber: '鲁H87654',
+    time: new Date(Date.now() - 60000).toLocaleTimeString()
+  },
+  {
+    plateNumber: '鲁H13579',
+    time: new Date().toLocaleTimeString()
+  }
+])
+
+// 更新检测数据结构
+const detectedItems = ref([
+  { 
+    type: 'car',
+    confidence: 0.81,
+    position: { x: 30, y: 40, width: 40, height: 30 }
+  },
+  { 
+    type: 'person',
+    confidence: 0.57,
+    position: { x: 10, y: 60, width: 10, height: 20 }
+  }
+])
+
+// 过滤摄像头列表
+const filteredCameras = computed(() => {
+  let result = cameras.value
+  if (searchKey.value) {
+    result = result.filter(camera => 
+      camera.name.includes(searchKey.value) || 
+      camera.location.includes(searchKey.value)
+    )
+  }
+  if (filterStatus.value) {
+    result = result.filter(camera => camera.status === filterStatus.value)
+  }
+  return result
+})
+
+// 获取当前摄像头信息
+const getCurrentCamera = computed(() => {
+  return cameras.value.find(cam => cam.id === currentCamera.value)
+})
+
+// 切换摄像头
+const switchCamera = (camera) => {
+  if (camera.status === 'offline') {
+    ElMessage.warning('该监控点当前离线')
+    return
+  }
+  currentCamera.value = camera.id
 }
 
-// 抓拍
-const handleSnapshot = () => {
-  ElMessage.success('抓拍成功')
+// 处理抓拍
+const handleCapture = () => {
+  ElMessage.success('已抓拍并保存')
 }
 
-// 自动更新检测结果
-let updateTimer = null
+// 处理报警
+const handleAlert = () => {
+  ElMessage.warning('已发起报警')
+}
 
-onMounted(() => {
-  updateTimer = setInterval(() => {
-    if (isAnalyzing.value) {
-      // 更新检测框位置
-      currentDetections.value = currentDetections.value.map(detection => ({
-        ...detection,
-        style: {
-          ...detection.style,
-          left: `${parseInt(detection.style.left) + Math.random() * 10 - 5}px`,
-          top: `${parseInt(detection.style.top) + Math.random() * 10 - 5}px`
-        }
-      }))
-      
-      // 添加新的分析结果
-      if (Math.random() > 0.8) {
-        const newResult = {
-          id: Date.now(),
-          plateNumber: `鲁H${Math.random().toString(36).substr(2, 4).toUpperCase()}`,
-          snapshot: 'path/to/new-snapshot.jpg',
-          time: new Date().toLocaleTimeString(),
-          status: Math.random() > 0.9 ? '未登记' : '正常通行',
-          type: Math.random() > 0.9 ? 'danger' : 'success'
-        }
-        analysisResults.value.unshift(newResult)
-        if (analysisResults.value.length > 10) {
-          analysisResults.value.pop()
+// 处理全屏
+const handleFullscreen = () => {
+  if (videoContainer.value) {
+    if (document.fullscreenElement) {
+      document.exitFullscreen()
+    } else {
+      videoContainer.value.requestFullscreen()
+    }
+  }
+}
+
+// 画面分割模式
+const screenMode = ref('1')
+
+// 监控类型
+const monitorType = ref('all')
+
+// 处理回放
+const handlePlayback = () => {
+  ElMessage.info('正在开发中...')
+}
+
+// 处理画面点击
+const handleCellClick = (index) => {
+  if (screenMode.value !== '1') {
+    screenMode.value = '1'
+  }
+}
+
+// 分析类型
+const analysisType = ref('today')
+let trendChart = null
+
+// 车辆类型分布数据
+const vehicleTypes = ref([
+  { name: '小型轿车', count: 156, percentage: 65, color: '#409EFF' },
+  { name: 'SUV', count: 45, percentage: 20, color: '#67C23A' },
+  { name: '商务车', count: 28, percentage: 12, color: '#E6A23C' },
+  { name: '其他', count: 8, percentage: 3, color: '#909399' }
+])
+
+// 添加 ref
+const trendChartRef = ref(null)
+
+// 修改初始化趋势图的方法
+const initTrendChart = () => {
+  if (!trendChartRef.value) return
+  
+  trendChart = echarts.init(trendChartRef.value)
+  const option = {
+    grid: {
+      top: '10%',
+      left: '3%',
+      right: '4%',
+      bottom: '3%',
+      containLabel: true
+    },
+    xAxis: {
+      type: 'category',
+      data: ['08:00', '10:00', '12:00', '14:00', '16:00', '18:00', '20:00'],
+      axisLine: {
+        lineStyle: {
+          color: '#909399'
         }
       }
-    }
-  }, 1000)
+    },
+    yAxis: {
+      type: 'value',
+      axisLine: {
+        lineStyle: {
+          color: '#909399'
+        }
+      }
+    },
+    series: [
+      {
+        data: [30, 45, 78, 62, 88, 95, 42],
+        type: 'line',
+        smooth: true,
+        areaStyle: {
+          opacity: 0.3
+        },
+        itemStyle: {
+          color: '#409EFF'
+        }
+      }
+    ]
+  }
+  trendChart.setOption(option)
+}
+
+// 监听分析类型变化
+watch(analysisType, (newValue) => {
+  // 根据选择的时间范围更新图表数据
+  updateChartData(newValue)
 })
 
-onUnmounted(() => {
-  if (updateTimer) {
-    clearInterval(updateTimer)
+// 更新图表数据
+const updateChartData = (type) => {
+  // 这里可以根据不同的时间范围请求后端数据
+  // 示例数据
+  const data = {
+    today: [30, 45, 78, 62, 88, 95, 42],
+    week: [220, 182, 191, 234, 290, 330, 310],
+    month: [820, 932, 901, 934, 1290, 1330, 1320]
   }
+  
+  trendChart.setOption({
+    series: [{
+      data: data[type]
+    }]
+  })
+}
+
+// 修改 onMounted
+onMounted(() => {
+  // 确保 DOM 已经渲染完成
+  nextTick(() => {
+    initTrendChart()
+  })
+  
+  // 监听窗口大小变化，重绘图表
+  window.addEventListener('resize', () => {
+    trendChart?.resize()
+  })
+})
+
+// 添加 onUnmounted 清理
+onUnmounted(() => {
+  // 销毁图表实例
+  if (trendChart) {
+    trendChart.dispose()
+  }
+  // 移除事件监听
+  window.removeEventListener('resize', () => {
+    trendChart?.resize()
+  })
 })
 </script>
 
 <style scoped>
 .vehicle-monitor {
+  height: 100vh;
+  background: #f0f2f5;
+}
+
+.monitor-layout {
   height: 100%;
-}
-
-.statistics-row {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: 20px;
-  margin-bottom: 20px;
+  grid-template-columns: 220px 1fr 300px;
+  background: #fff;
 }
 
-.stat-card {
-  background: #fff;
-  border-radius: 8px;
-  padding: 20px;
+.camera-list {
+  border-right: 1px solid #e8e8e8;
+  display: flex;
+  flex-direction: column;
+}
+
+.list-header {
+  padding: 12px;
+  border-bottom: 1px solid #e8e8e8;
+}
+
+.list-content {
+  flex: 1;
+  overflow-y: auto;
+}
+
+.camera-item {
+  padding: 12px;
+  cursor: pointer;
+  border-bottom: 1px solid #f0f0f0;
+  transition: all 0.3s;
+}
+
+.camera-item:hover {
+  background: #f6f6f6;
+}
+
+.camera-item.active {
+  background: #e6f7ff;
+}
+
+.camera-info {
   display: flex;
   align-items: center;
-  gap: 16px;
-  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.1);
+  gap: 8px;
+  margin-bottom: 8px;
 }
 
-.video-container {
+.camera-text {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.camera-text .name {
+  font-size: 14px;
+  color: #303133;
+}
+
+.camera-text .location {
+  font-size: 12px;
+  color: #909399;
+}
+
+.monitor-main {
+  display: flex;
+  flex-direction: column;
+  background: #000;
+  min-height: 0; /* 防止溢出 */
+}
+
+.video-header {
+  padding: 8px 16px;
+  background: rgba(0, 0, 0, 0.8);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  z-index: 1;
+}
+
+.camera-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.camera-title .title {
+  color: #fff;
+  font-size: 16px;
+}
+
+.camera-title .subtitle {
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 12px;
+}
+
+.video-wrapper {
+  flex: 1;
   position: relative;
   display: flex;
-  gap: 20px;
-  height: 600px;
+  min-height: 0; /* 防止溢出 */
 }
 
-.video-player {
-  flex: 2;
-  position: relative;
-  background: #000;
-  border-radius: 4px;
-  overflow: hidden;
-}
-
-.video-content {
-  width: 100%;
-  height: 100%;
-}
-
-.analysis-overlay {
+:deep(.video-player) {
   position: absolute;
   top: 0;
   left: 0;
   width: 100%;
   height: 100%;
-  pointer-events: none;
+  background: #000;
 }
 
-.detection-box {
-  position: absolute;
-  border: 2px solid #409EFF;
-  border-radius: 4px;
-  transition: all 0.3s ease;
-}
-
-.detection-info {
-  position: absolute;
-  top: -25px;
-  left: 0;
-  background: rgba(64, 158, 255, 0.9);
-  color: #fff;
-  padding: 2px 8px;
-  border-radius: 4px;
-  font-size: 12px;
+.info-panel {
+  border-left: 1px solid #e8e8e8;
   display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 16px;
+}
+
+.panel-section {
+  background: #fff;
+  border-radius: 4px;
+}
+
+.section-title {
+  font-size: 14px;
+  font-weight: 500;
+  color: #303133;
+  margin-bottom: 16px;
+}
+
+.vehicle-info {
+  padding: 16px;
+  background: #f8f9fa;
+  border-radius: 4px;
+}
+
+.plate-info {
+  margin-bottom: 16px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.plate-number {
+  font-size: 20px;
+  font-weight: bold;
+  color: #409EFF;
+}
+
+.info-table {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.info-row {
+  display: flex;
+  justify-content: space-between;
+}
+
+.info-row .label {
+  color: #909399;
+}
+
+.info-row .value {
+  color: #303133;
+  font-weight: 500;
+}
+
+.stat-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  padding: 16px;
+}
+
+.stat-item {
+  display: flex;
+  flex-direction: column;
   align-items: center;
   gap: 4px;
 }
 
-.analysis-panel {
-  flex: 1;
-  background: #f5f7fa;
-  border-radius: 4px;
-  padding: 16px;
-  display: flex;
-  flex-direction: column;
+.stat-item .number {
+  font-size: 24px;
+  font-weight: bold;
+  color: #409EFF;
 }
 
-.panel-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 16px;
-}
-
-.analysis-content {
-  flex: 1;
-  overflow-y: auto;
-}
-
-.analysis-item {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 12px;
-  border-bottom: 1px solid #eee;
-}
-
-.result-info {
-  flex: 1;
-}
-
-.plate-number {
-  font-weight: 500;
-  margin-bottom: 4px;
-}
-
-.detail-info {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  color: #909399;
+.stat-item .label {
   font-size: 12px;
+  color: #909399;
 }
 
-.records-list {
-  height: 600px;
-  overflow-y: auto;
+.stat-item.warning .number {
+  color: #E6A23C;
+}
+
+.record-list {
+  padding: 0 16px;
 }
 
 .record-item {
-  padding: 16px;
-  border-bottom: 1px solid #eee;
-}
-
-.record-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 8px;
-}
-
-.record-details {
-  margin-bottom: 8px;
+  padding: 12px 0;
+  border-bottom: 1px solid #f0f0f0;
 }
 
 .record-info {
   display: flex;
   justify-content: space-between;
-  color: #909399;
-  font-size: 13px;
-}
-
-.violation-info {
-  display: flex;
   align-items: center;
-  gap: 4px;
-  color: #f56c6c;
-  font-size: 13px;
-  margin-top: 4px;
 }
 
-.record-image {
-  width: 100%;
-  height: 120px;
-  border-radius: 4px;
-  overflow: hidden;
+.record-plate {
+  font-size: 14px;
+  color: #303133;
 }
 
-.record-image :deep(.el-image) {
-  width: 100%;
-  height: 100%;
-}
-
-.camera-select {
-  width: 200px;
-}
-
-.analysis-status {
-  margin-left: 12px;
-}
-
-:deep(.el-card__body) {
-  padding: 0;
-}
-
-.monitor-card :deep(.el-card__body) {
-  padding: 20px;
+.record-time {
+  font-size: 12px;
+  color: #909399;
 }
 </style> 
